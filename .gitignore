@@ -1,0 +1,16 @@
+# Ignore .env files
+.env
+
+# Node.js dependencies
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker files
+*.dockerignore
+
+# System files
+.DS_Store
