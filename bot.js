@@ -80,13 +80,14 @@ async function fetchSchedule() {
         let textMessage = "";
 
         textMessage += `현재 스테이지는 **${stageName}**!\n`;
-        textMessage += `시작: <t:${new Date(startTime).getTime() / 1000}:F>\n끝: <t:${new Date(endTime).getTime() / 1000}:F>\n`;
+        textMessage += `**시작: <t:${new Date(startTime).getTime() / 1000}:F>**\n끝: <t:${new Date(endTime).getTime() / 1000}:F>\n`;
 
-        textMessage += "무기:\n"; // Replace with the dynamic message you want to send
+
+        textMessage += "### 무기:\n"; // Replace with the dynamic message you want to send
         
         weapons.forEach((weapon) => {
             const weaponName = fetchWeaponName(weapon.__splatoon3ink_id); // Assuming each weapon has an `id` field
-            textMessage += `> ${weaponName}\n`;
+            textMessage += `> - ${weaponName}\n`;
         });
 
         console.log("Sending image to Discord...");
@@ -98,20 +99,15 @@ async function fetchSchedule() {
             .setTitle('새먼런 로테이션 변경!')
             .setDescription(textMessage) 
             .setImage('attachment://currentSalmon.png') 
-            .setColor('#cf8c4a') 
+            .setColor('#ffcc00')
+            .setFooter({ text: `시작: <t:${new Date(startTime).getTime() / 1000}:F> 끝: <t:${new Date(endTime).getTime() / 1000}:F>` })
             .setTimestamp(); 
+            
 
         const message = await channel.send({
             embeds: [embed],
             files: [imageAttachment],
         });
-        /*const message = await channel.send({
-            content: textMessage,  // Text message to send
-            files: [{
-                attachment: finalImagePath,   // Image file to send
-                name: 'finalImage.png'        // Optional: specify the name of the image file
-            }]
-        });*/
 
         // Calculate the time difference from now to `endTime` to schedule the next fetch
         const now = new Date();
