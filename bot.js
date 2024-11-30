@@ -80,7 +80,7 @@ async function fetchSchedule() {
         let textMessage = "";
 
         textMessage += `현재 스테이지는 **${stageName}**!\n`;
-        textMessage += `**시작: <t:${new Date(startTime).getTime() / 1000}:F>**\n끝: <t:${new Date(endTime).getTime() / 1000}:F>\n`;
+        textMessage += `시작: <t:${new Date(startTime).getTime() / 1000}:F>\n끝: <t:${new Date(endTime).getTime() / 1000}:F>\n`;
 
 
         textMessage += "### 무기:\n"; // Replace with the dynamic message you want to send
@@ -100,7 +100,6 @@ async function fetchSchedule() {
             .setDescription(textMessage) 
             .setImage('attachment://currentSalmon.png') 
             .setColor('#ffcc00')
-            .setFooter({ text: `시작: <t:${new Date(startTime).getTime() / 1000}:F> 끝: <t:${new Date(endTime).getTime() / 1000}:F>` })
             .setTimestamp(); 
             
 
