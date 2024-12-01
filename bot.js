@@ -52,18 +52,44 @@ function fetchStageName(variableKey) {
     }
 }
 
-async function fetchSchedule() {
+async function fetchSchedule(sendImmediately = true) {
     try {
         console.log("Fetching schedule...");
+
         const response = await axios.get(SCHEDULE_URL);
         const nodes = response.data.data.coopGroupingSchedule.regularSchedules.nodes;
 
         if (!nodes || nodes.length === 0) throw new Error("No schedule data available");
 
-        // Process the schedule data
-        const { startTime, endTime, setting } = nodes[0];
+        let selectedNode = null;
+
+        // Find the first valid node where endTime is in the future
+        for (const node of nodes) {
+            const endTime = new Date(node.endTime);
+            const curDate = new Date();
+            if (endTime > curDate) {
+                selectedNode = node;
+                break;
+            }
+        }
+
+        if (!selectedNode) throw new Error("No valid schedule data available");
+
+        const { startTime, endTime, setting } = selectedNode;
+
+        // If `sendImmediately` is false, wait until `endTime` to send the schedule
+        if (!sendImmediately) {
+            const timeDifference = new Date(endTime) - new Date();
+
+            if (timeDifference > 0) {
+                console.log(`Next schedule will be sent in ${timeDifference / 1000 / 60} minutes`);
+                setTimeout(() => fetchSchedule(true), timeDifference);
+                return; // Stop further processing until timeout executes
+            }
+        }
+
+        // Process and send the schedule if `sendImmediately` is true
         const { boss, coopStage, weapons } = setting;
-        console.log(coopStage.image.url);
 
         console.log("Downloading images...");
         const stageImagePath = await downloadImage(coopStage.image.url, 'stage.png');
@@ -76,55 +102,43 @@ async function fetchSchedule() {
         console.log("Creating merged image...");
         const finalImagePath = await createMergedImage(stageImagePath, weaponPaths, stageName, boss.id);
 
-        // Define the text message you want to send
         let textMessage = "";
-
         textMessage += `현재 스테이지는 **${stageName}**!\n`;
         textMessage += `시작: <t:${new Date(startTime).getTime() / 1000}:F>\n끝: <t:${new Date(endTime).getTime() / 1000}:F>\n`;
 
-
-        textMessage += "### 무기:\n"; // Replace with the dynamic message you want to send
-        
+        textMessage += "### 무기:\n";
         weapons.forEach((weapon) => {
-            const weaponName = fetchWeaponName(weapon.__splatoon3ink_id); // Assuming each weapon has an `id` field
+            const weaponName = fetchWeaponName(weapon.__splatoon3ink_id);
             textMessage += `> - ${weaponName}\n`;
         });
 
         console.log("Sending image to Discord...");
-        // Send the image with text to Discord channel
-        const channel = await client.channels.fetch(SCHEDULE_CHANNEL); // Fetch channel using the channel ID from .env
+        const channel = await client.channels.fetch(SCHEDULE_CHANNEL);
         const imageAttachment = new AttachmentBuilder(finalImagePath, { name: 'currentSalmon.png' });
 
         const embed = new EmbedBuilder()
             .setTitle('새먼런 로테이션 변경!')
-            .setDescription(textMessage) 
-            .setImage('attachment://currentSalmon.png') 
+            .setDescription(textMessage)
+            .setImage('attachment://currentSalmon.png')
             .setColor('#ffcc00')
-            .setTimestamp(); 
-            
+            .setTimestamp();
 
-        const message = await channel.send({
+        await channel.send({
             embeds: [embed],
             files: [imageAttachment],
         });
 
-        // Calculate the time difference from now to `endTime` to schedule the next fetch
-        const now = new Date();
-        const nextFetchTime = new Date(endTime);
-        const timeDifference = nextFetchTime - now;
-
-        if (timeDifference > 0) {
-            console.log(`Next fetch will be in ${timeDifference / 1000 / 60 / 60} hours`);
-            setTimeout(fetchSchedule, timeDifference); // Schedule the next fetch based on `endTime`
-        } else {
-            console.log("The scheduled end time has already passed, fetching schedule again...");
-            setTimeout(fetchSchedule, 0); // Immediate re-fetch if the scheduled time has passed
-        }
+        // Schedule the next fetch based on `endTime`
+        const timeDifference = new Date(endTime) - new Date();
+        console.log(`Next fetch will be in ${timeDifference / 1000 / 60 / 60} hours`);
+        setTimeout(fetchSchedule, timeDifference);
 
     } catch (error) {
         console.error("Error fetching schedule:", error.message);
     }
 }
+
+
 
 async function downloadImage(url, fileName) {
     const dirPath = _resolve(__dirname, '../assets');
@@ -211,15 +225,13 @@ async function createMergedImage(stageImagePath, weaponPaths, stageName="", boss
     });
 }
 
-
-
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user.tag}`);
     await fetchAndStoreJSON();
-    fetchSchedule(); // Fetch data on startup
+    fetchSchedule(false); // Start without sending the current schedule
 });
 
+
 // Login to Discord
-console.log(process.env.DISCORD_TOKEN);
 client.login(process.env.DISCORD_TOKEN);
 
